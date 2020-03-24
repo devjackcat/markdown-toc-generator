@@ -51,7 +51,13 @@ int main(int argc, const char * argv[]) {
             for (NSInteger index = 0; index < jinNum.length-1; index++) {
                 [tocBuilder appendString:@"    "];
             }
-            [tocBuilder appendFormat:@"* [%@](#%@)\n",content,content];
+            NSString *link = content;
+            //去除括号
+            link = [link stringByReplacingOccurrencesOfString:@"(" withString:@""];
+            link = [link stringByReplacingOccurrencesOfString:@")" withString:@""];
+            link = [link stringByReplacingOccurrencesOfString:@"[" withString:@""];
+            link = [link stringByReplacingOccurrencesOfString:@"]" withString:@""];
+            [tocBuilder appendFormat:@"* [%@](#%@)\n",content,link];
         }
         
         printf("%s",[tocBuilder cStringUsingEncoding:NSUTF8StringEncoding]);
