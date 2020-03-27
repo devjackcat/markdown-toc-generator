@@ -52,7 +52,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "/Users/yongping/Documents/Pod&#x5e93;/toc_generator/toc_generator/readme.md"
+            argument = "/Users/yongping/Desktop/JCS/markdown-toc-generator/toc_generator/readme.md"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

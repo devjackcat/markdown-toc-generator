@@ -42,6 +42,9 @@ int main(int argc, const char * argv[]) {
             }
         }
         
+        //将每个link都添加到这里，用于计算出现次数，在link后面添加”-N“
+        NSMutableDictionary *contentCountDict = [NSMutableDictionary dictionary];
+        
         NSMutableString *tocBuilder = [NSMutableString string];
         [tocBuilder appendString:@"目录内容\n\n"];
         for (NSString *toc in tocLines) {
@@ -57,7 +60,15 @@ int main(int argc, const char * argv[]) {
             link = [link stringByReplacingOccurrencesOfString:@")" withString:@""];
             link = [link stringByReplacingOccurrencesOfString:@"[" withString:@""];
             link = [link stringByReplacingOccurrencesOfString:@"]" withString:@""];
-            [tocBuilder appendFormat:@"* [%@](#%@)\n",content,link];
+            
+            //已出现次数
+            NSInteger count = [[contentCountDict valueForKey:link] integerValue];
+            NSString *tempLink = link;
+            if(count > 0){
+                tempLink = [NSString stringWithFormat:@"%@-%zd",tempLink,count];
+            }
+            [tocBuilder appendFormat:@"* [%@](#%@)\n",content,tempLink];
+            contentCountDict[link] = @(count + 1);
         }
         
         printf("%s",[tocBuilder cStringUsingEncoding:NSUTF8StringEncoding]);

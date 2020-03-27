@@ -1,754 +1,916 @@
-# JCS_Tool
-
-### UITableView(代码创建)
-### UICollectionView(代码创建)
-### UITableView(配置文件)
-### UICollectionView(配置文件)
+# JCS_Kit
 
 [toc]
 
 目录
-* [介绍](#介绍)
-* [初体验](#初体验)
-* [配置信息](#配置信息)
-    * [配置](#配置)
-    * [prefix](#prefix)
-    * [responseModel](#responseModel)
+
+* [JCS_Kit](#JCS_Kit)
+    * [介绍](#介绍)
+    * [初体验](#初体验)
+    * [集成方法](#集成方法)
+    * [JCS_BaseLib](#JCS_BaseLib)
+    * [JCS_Category](#JCS_Category)
+    * [JCS_Injection](#JCS_Injection)
+        * [示例](#示例)
+        * [如何开启](#如何开启)
+        * [配置文件名称](#配置文件名称)
+        * [运行时注入](#运行时注入)
+        * [配置规则](#配置规则)
+            * [基本类型注入](#基本类型注入)
+            * [NSDictionary](#NSDictionary)
+            * [NSArray](#NSArray)
+            * [模型注入](#模型注入)
+            * [模型数组注入](#模型数组注入)
+        * [常量注入](#常量注入)
+        * [完整示例](#完整示例)
+    * [JCS_Router](#JCS_Router)
+        * [调用规则](#调用规则)
+        * [类方法](#类方法)
+        * [缺省方法](#缺省方法)
+        * [完成回调](#完成回调)
+        * [返回值](#返回值)
+        * [跳转UIViewController](#跳转UIViewController)
+        * [特殊路由](#特殊路由)
+    * [JCS_EventBus](#JCS_EventBus)
+        * [示例](#示例)
+        * [事件响应注册](#事件响应注册)
+        * [事件触发](#事件触发)
+        * [路由表](#路由表)
+    * [JCS_Create](#JCS_Create)
+        * [UITableView(代码创建)](#UITableView代码创建)
+        * [UICollectionView(代码创建)](#UICollectionView代码创建)
+        * [UITableView(配置文件)](#UITableView配置文件)
+        * [UICollectionView(配置文件)](#UICollectionView配置文件)
 * [Author](#Author)
 
-## 介绍(aaa)
+## 介绍
 
-JCS_Tool 用来生成Enum、Model及Request的工具。
+JCS_Kit为快速便捷开发而生。JCS_Kit包含下面几个模块
+* JCS_BaseLib(主要是常用的宏定义)
+* JCS_Category(常用分类)
+* JCS_Router(路由)
+* JCS_Injection(从配置文件进行数据注入)
+* JCS_EventBus(事件总线)
+* JCS_Create(链式语法创建UI对象)
 
 ## 初体验
 
-配置信息source.h
+示例1: 创建Label对象
 
-```
-Config{
-    "prefix":"JCUser",
-    "responseModel":"CommonResponse"
-}
+原先代码：
 
-/**
- 生成枚举 Sex
-*/
-enum Sex {
-    desc 这是性别枚举
-    male = 1,   //男
-    female = 2, //女
-}
-
-/**
- 生成模型Person
-*/
-message Person {
-    desc 用户信息实体类
-    optional string name = @"张三"; //姓名
-    optional Sex sex = male; //性别
-}
-
-/**
- 生成用户用户信息接口请求方法(
-    请求方法:POST
-    方法名:getPersonInfoById
-    返回数据解析类型：Person
-    接口: /getUserInfo.action
-    参数：userId
- )
-*/
-request post getPersonInfoById Person /getUserInfo.action {
-    desc 获取用户信息
-    optional int userId = 0; //用户ID
-}
+```objc
+UILabel *titleLabel = [[UILabel alloc] init];
+titleLabel.font = [UIFont systemFontOfSize:14];
+titleLabel.textColor = UIColor.redColor;
+titleLabel.text = @"Hello World";
+titleLabel.textAlignment = NSTextAlignmentCenter;
+[self.view addSubview:titleLabel];
+[titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+    make.left.mas_equalTo(16);
+    make.right.mas_equalTo(-16);
+    make.top.mas_equalTo(10);
+}];
+self.titleLabel = titleLabel;
 ```
 
-上面这个配置文件通过JCS_Tool可以生成 JCUserModel.h、JCUserModel.m、JCUserRequest.h、JCUserRequest.m四个文件。
+使用JCS_Create后的代码
 
-JCSUserModel.h
+```
+[UILabel jcs_create].jcs_layout(self.view, ^(MASConstraintMaker *make) {
+    make.left.mas_equalTo(16);
+    make.right.mas_equalTo(-16);
+    make.top.mas_equalTo(10);
+}).jcs_toLabel()
+.jcs_fontSize(14)
+.jcs_textColor(UIColor.redColor)
+.jcs_text(@"Hello World")
+.jcs_textAlignment_Center()
+.jcs_associated(&_titleLabel);
 ```
 
-#import <UIKit/UIKit.h>
+示例2: 创建UIButton对象
 
+原先代码
 
-@class JCUserPerson;
+```
+- (void)setup {
+    UIButton *loginBtn = [[UIButton alloc] init];
+    [loginBtn setTitle:@"Login" forState:(UIControlStateNormal)];
+    [loginBtn setTitleColor:UIColor.blackColor forState:(UIControlStateNormal)];
+    [loginBtn setImage:[UIImage imageNamed:@"login-icon"] forState:(UIControlStateNormal)];
+    loginBtn.titleLabel.font = [UIFont systemFontOfSize:14];
+    loginBtn.layer.cornerRadius = 22;
+    loginBtn.layer.masksToBounds = YES;
+    [loginBtn addTarget:self action:@selector(loginButtonClick:) forControlEvents:(UIControlEventTouchUpInside)];
+    [self.view addSubview:loginBtn];
+    [loginBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.width.mas_equalTo(100);
+        make.height.mas_equalTo(44);
+        make.center.equalTo(self.view);
+    }];
+    self.loginBtn = loginBtn;
+}
 
+- (void)loginButtonClick:(UIButton*)sender{
+    //TODO: 登录逻辑
+}
+```
 
-/**
-  这是性别枚举
- */
-typedef NS_ENUM(NSInteger, JCUserSex) { 
-  JCUserSexMale = 1, //男 
-  JCUserSexFemale = 2, //女 
-};
+是使用JCS_Create后的代码
 
+```
+@weakify(self)
+[UIButton jcs_create].jcs_layout(self.view, ^(MASConstraintMaker *make) {
+    make.width.mas_equalTo(100);
+    make.height.mas_equalTo(44);
+    make.center.equalTo(self.view);
+}).jcs_toButton()
+.jcs_normalTitle(@"Login")
+.jcs_normalTitleColor(UIColor.blackColor)
+.jcs_normalImage([UIImage imageNamed:@"login-icon"])
+.jcs_fontSize(14)
+.jcs_clickBlock(^(UIButton *sender){
+    @strongify(self)
+    //TODO: 登录逻辑
+})
+.jcs_cornerRadius(22)
+.jcs_associated(&_loginBtn);
+```
 
-/**
-  用户信息实体类
- */
-@interface JCUserPerson : NSObject
-/** 姓名 */
-@property (nonatomic, strong) NSString *name;
-/** 性别 */
-@property (nonatomic, assign) JCUserSex sex;
+示例3: 创建UITableView对象
+
+原先代码
+
+```
+@interface ExampleVC ()<UITableViewDataSource,UITableViewDelegate>
+
+/** UITableView **/
+@property (nonatomic, strong) UITableView *tableView;
+
+@end
+
+@implementation ExampleVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    self.tableView = [[UITableView alloc] init];
+    [self.tableView registerClass:DemoCell.class forCellReuseIdentifier:@"DemoCell"];
+    [self.tableView registerClass:DemoSectionHeaderView.class forHeaderFooterViewReuseIdentifier:@"DemoSectionHeaderView"];
+    [self.tableView registerClass:DemoSectionFooterView.class forHeaderFooterViewReuseIdentifier:@"DemoSectionFooterView"];
+    self.tableView.delegate = self;
+    self.tableView.dataSource = self;
+    [self.view addSubview:self.tableView];
+    [self.tableView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.edges.equalTo(self.view);
+    }];
+    
+}
+
+#pragma mark - UITableViewDataSource
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 2;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return 10;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    // return cell
+}
+
+#pragma mark - UITableViewDelegate
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    //点击事件
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    //Section Header
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
+    //Section Footer
+}
+
 @end
 ```
 
-JCUserModel.h.m
+使用JCS_Create后的代码
+
+```
+@interface ExampleVC ()
+
+/** UITableView **/
+@property (nonatomic, strong) UITableView *tableView;
+/** UITableView 数据源 **/
+@property (nonatomic, strong) NSMutableArray<JCS_TableSectionModel*> *sections;
+
+@end
+
+@implementation ExampleVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    @weakify(self)
+    [UITableView jcs_create].jcs_layout(self.view, ^(MASConstraintMaker *make) {
+        make.edges.equalTo(self.view);
+    }).jcs_toTableView()
+    .jcs_customerSections(self.sections)
+    .jcs_customerDidSelectRowBlock(^(NSIndexPath*indexPath,JCS_TableRowModel*selecedModel){
+        @strongify(self)
+        //TODO: Cell 点击事件
+    })
+    .jcs_associated(&_sections);
+}
+
+///配置数据源
+- (void)configSectionss {
+    self.sections = [NSMutableArray array];
+    for (NSInteger sectionIndex = 0; sectionIndex < 5; sectionIndex++) {
+        
+        JCS_TableSectionModel *sectionModel = [JCS_TableSectionModel jcs_create];
+        sectionModel.headerClass = @"DemoSectionHeaderView";
+        sectionModel.footerClass = @"DemoSectionFooterView";
+        sectionModel.headerHeight = 50;
+        sectionModel.footerHeight = 50;
+        sectionModel.headerData = @{@"title":@"This is Header Data"};
+        sectionModel.footerData = @{@"title":@"This is Footer Data"};
+        [self.sections addObject:sectionModel];
+        
+        for (NSInteger rowIndex = 0; rowIndex < 10; rowIndex++) {
+            JCS_TableRowModel *rowModel = [JCS_TableRowModel jcs_create];
+            rowModel.cellClass = @"DemoCell";
+            rowModel.cellHeight = 44;
+            rowModel.data = @{@"title":@"This is Cell Data"};
+            [sectionModel.rows addObject:rowModel];
+        }
+    }
+}
+
+@end
 ```
 
-#import "JCUserModel.h"
+## 集成方法
 
-/**
-  用户信息实体类
- */
-@implementation JCUserPerson
- 
+```
+//添加源
+source 'https://gitee.com/devjackcat/JCS_PodSpecs.git'
+
+//导入
+pod 'JCS_Kit'
+
+#import <JCS_Kit/JCS_Kit.h>
+```
+
+## JCS_BaseLib
+
+包含一些常会宏, 自行参考```JCS_Macros.h```定义
+* 颜色创建
+* 屏幕属性
+* 设备判断
+* 导航栏、Tab等高度
+* .....
+
+## JCS_Category
+
+常用的分类，代码不多，自行阅读实现文件吧
+
+## JCS_Injection
+
+JCS_Injection能够根据文件配置对对象属性进行动态注入。
+
+该功能需要依赖MJExtension，在基础上进行hook实现，对MJExtension现有功能无侵入也无影响。
+
+以下对Person进行初始化赋值为例。
+
+### 示例
+### 示例
+### 示例
+
+通常我们会这样写
+
+```
+
+@interface Person()
+
+/** 姓名 **/
+@property (nonatomic, copy) NSString *name;
+/** 年龄 **/
+@property (nonatomic, assign) NSInteger age;
+/** 爱好 **/
+@property (nonatomic, strong) NSArray<NSString*> *likes;
+/** 其他信息 **/
+@property (nonatomic, strong) NSDictionary *profile;
+
+@end
+
+@implementation Person
+
 - (instancetype)init {
     self = [super init];
     if (self) {
-      self.name = @"张三";
-      self.sex = JCUserSexMale;
+        self.name = @"张三";
+        self.age = 28;
+        self.likes = @[@"篮球",@"跑步",@"打架"];
+        self.profile = @{
+            @"blog":@"https://blogs.uvdog.com",
+            @"company":@"从不上班"
+        };
     }
     return self;
 }
- 
-@end
-```
 
-JCUserRequest.h
-```
-
-#import <UIKit/UIKit.h>
- 
-
-#import "CommonResponse.h"
-#import "JCUserModel.h"
-
-@interface JCUserRequest : NSObject
-
-
-
-#pragma mark - getPersonInfoById
-
-
-/**
-  获取用户信息
-
-  @params hub 是否转菊花 
-  @params params 请求参数 
-  @params success 成功回调 
-  @params failure 失败回调 
- */
-+ (void)requestGetPersonInfoByIdWithHub:(BOOL)hub params:(NSDictionary *)params success:(void(^)(CommonResponse *result,JCUserPerson *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
-
-
-/**
-  获取用户信息
-
-  @params hub 是否转菊花 
-  @params userId 用户ID 
-  @params success 成功回调 
-  @params failure 失败回调 
- */
-+ (void)requestGetPersonInfoByIdWithHub:(BOOL)hub userId:(NSInteger)userId  success:(void(^)(CommonResponse *result,JCUserPerson *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
+- (void)say {
+    NSLog(@"");
+}
 
 @end
 ```
 
-JCUserRequest.m
+使用JCS_Injection注入后代码是这样的
+
+数据文件 Person.geojson
 ```
-
-#import <UIKit/UIKit.h>
-#import <MJExtension/MJExtension.h>
-#import "JCS_Request.h"
-#import "JCUserRequest.h"
-
-@implementation JCUserRequest : NSObject
-
-
-#pragma mark - getPersonInfoById
-
-
-/**
-  获取用户信息
-
-  @params hub 是否转菊花 
-  @params params 请求参数 
-  @params success 成功回调 
-  @params failure 失败回调 
- */
-+ (void)requestGetPersonInfoByIdWithHub:(BOOL)hub params:(NSDictionary *)params success:(void(^)(CommonResponse *result,JCUserPerson *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure { 
-    if(hub){ 
-        dispatch_async(dispatch_get_main_queue(), ^{  
-            [JCS_Request showQueryHub]; 
-        }); 
-    } 
-    //参数预处理 
-    NSDictionary *processedParams = [JCS_Request preprocessParams:params]; 
-    NSString *url = nil; 
-    if([@"/getUserInfo.action" hasPrefix:@"/"] || [[JCS_Request getBaseUrl] hasSuffix:@"/"]){ 
-        url = [NSString stringWithFormat:@"%@/getUserInfo.action",[JCS_Request getBaseUrl]]; 
-    } else { 
-        url = [NSString stringWithFormat:@"%@//getUserInfo.action",[JCS_Request getBaseUrl]]; 
-    } 
-    [[JCS_Request sharedInstance] GET:url parameters:processedParams progress:^(NSProgress * _Nonnull uploadProgress) { 
- 
-    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) { 
-        if(hub){ 
-            dispatch_async(dispatch_get_main_queue(), ^{  
-                [JCS_Request hideRequestHub]; 
-            }); 
-        } 
-        CommonResponse *result = [CommonResponse mj_objectWithKeyValues:responseObject]; 
-        if(success){ 
-            //获取data数据 
-            id data = [JCS_Request dataInResponse:responseObject url:url requestParams:processedParams]; 
-            JCUserPerson *info = [JCUserPerson mj_objectWithKeyValues:data]; 
-            success(result, info, responseObject); 
-        } 
-    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) { 
-        if(hub){ 
-            dispatch_async(dispatch_get_main_queue(), ^{  
-                [JCS_Request showRequestErrorHub:error]; 
-            }); 
-        } 
-        //处理错误
-        [JCS_Request errorRequest:error url:url requestParams:params];
-        if(failure){
-            failure(error);
+{
+    "data": {
+        "name":"张三",
+        "age":30,
+        "likes":["骑车","游泳","跳伞"],
+        "profile":{
+            "blog":"https://blog.uvdog.com",
+            "company":"自由职业"
         }
-    }]; 
-} 
-
-
-
-/**
-  获取用户信息
-
-  @params hub 是否转菊花 
-  @params userId 用户ID 
-  @params success 成功回调 
-  @params failure 失败回调 
- */
-+ (void)requestGetPersonInfoByIdWithHub:(BOOL)hub userId:(NSInteger)userId  success:(void(^)(CommonResponse *result,JCUserPerson *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure {
-    NSMutableDictionary *params = [NSMutableDictionary dictionary];
-    params[@"userId"] = @(userId);
-    [self requestGetPersonInfoByIdWithHub:hub params:params success:success failure:failure];
-} 
-
-@end
-```
-
-## 配置信息
-
-### 配置
-
-下文的示例前缀均为JCUser
-
-```
-Config{
-    "prefix":"JCUser",
-    "responseModel":"CommonResponse",
-    "signalRequest":true
-}
-```
-
-### prefix
-
-生成模型、枚举、文件名前缀，必须配置。具体生成规则如下
-
-文件生成规则
-
-* ${prefix} + Model.h
-* ${prefix} + Model.m
-* ${prefix} + Request.h
-* ${prefix} + Request.m
-
-模型生成规则
-
-* ${prefix} + ${模型名称}
-
-枚举生成规则
-
-* ${prefix} + ${枚举名称}
-
-### responseModel
-
-接口相应解析类型
-
-例如接口相应格式如下，且则responseModel=CommonResponse
-```
-{
-    success:true,
-    msg:"成功",
-    code:10000,
-    data:{
-        ...
     }
 }
 ```
 
-CommonResponse 定义
+Person.m
 ```
-@interface CommonResponse : NSObject
+@interface Person()
 
-@property (nonatomic, assign) BOOL success;
-@property (nonatomic, copy) NSString *code;
-@property (nonatomic, copy) NSString *msg;
+/** 姓名 **/
+@property (nonatomic, copy) NSString *name;
+/** 年龄 **/
+@property (nonatomic, assign) NSInteger age;
+/** 爱好 **/
+@property (nonatomic, strong) NSArray<NSString*> *likes;
+/** 其他信息 **/
+@property (nonatomic, strong) NSDictionary *profile;
 
+@end
+
+@implementation Person
+
+/// 开启注入功能
+- (BOOL)jcs_propertyInjectEnable {
+    return YES;
+}
+
+- (void)say {
+    //TODO: 这里可以断点查看注入情况
+}
 @end
 ```
 
-### signalRequest
+乍一看这个功能好像没什么用，使用场景不很多。是的，日常开发这样的需求确实不多，但为了后面动态配置UITableView和UICollectionView，JCS_Injection还是有存在必要的。
 
-生成接口时是否需要生成RASSignal返回值的接口，后面会有讲到
-
-## import
-
-JCS_Tool支持外部import
+### 如何开启
 
 ```
-import.class = Person
-import.lib = Lib/Lib
-```
-
-上面配置信息将被解析为下面内容，并添加在所有.h文件的顶部
-
-```
-#import <Lib/Lib.h>
-#import "Person.h"
-```
-
-## 枚举
-
-```
-enum 枚举名称 {
-    desc 枚举备注
-    属性名1 = 属性值1, //备注1
-    属性名2 = 属性值2 //备注2
-    ......
+/// 开启注入功能
+- (BOOL)jcs_propertyInjectEnable {
+    return YES;
 }
 ```
 
-Example
+### 配置文件名称
+
+默认配置文件名为${classname}.geojson，也可以根据需要自己指定文件名。添加下面方法并返回指定文件名即可。
+
 ```
-enum Sex {
-    desc 这是性别枚举
-    male = 1,   //男
-    female = 2, //女
+- (NSString *)jcs_propertyConfigFileName {
+    return @"customer-config-file.json";
 }
 ```
 
-生成后的内容
+### 运行时注入
+
+JCS_Injection提供了下面三个运行时进行注入的方法。
 
 ```
-/**
-  这是性别枚举
- */
-typedef NS_ENUM(NSInteger, JCUserSex) { 
-  JCUserSexMale = 1, //男 
-  JCUserSexFemale = 2, //女 
-};
+/// 使用字典进行注入(字典格式必须符合配置文件格式)
+- (void)jcs_injectPropertiesWithDictionary:(NSDictionary*)dictionary;
+/// 使用JSON字符串进行注入(JSON格式必须符合配置文件格式)
+- (void)jcs_injectPropertiesWithJSONString:(NSString*)jsonString;
+/// 使用配置文件进行注入
+- (void)jcs_injectPropertiesWithConfigFile:(NSString*)configFileName;
 ```
 
-## 模型
+### 配置规则
 
-### 语法
+1. **需要注入属性必须放在"data"属性下**
+2. **data下的属性名必须和对象中定义属性名一致，否则无法注入**
+3. 已支持基本类型、NSDictionary、NSArray、自定义模型、自定义模型数组
+
+#### 基本类型注入
 
 ```
-message Model名 {
-    desc Model备注
-    optional 类型 属性名1 = 默认值; //属性备注
-    optional 类型 属性名2 = 默认值; //属性备注
-    ...
+{
+    "data":{
+      "count":50,
+      "name":"张三"
+    }
 }
 ```
 
-Example
+#### NSDictionary 注入
+
 ```
-message Person {
-    desc 用户信息实体类
-    optional string name = @"张三"; //姓名
-    optional Sex sex = male; //性别
+{
+    "data":{
+          "profile":{
+              "username":"张三",
+              "age":18
+          }
+    }
 }
 ```
 
-### 类型
+#### NSArray 注入
 
-### 简单类型
+```
+{
+    "data":{
+          "items":[{
+              "id":123,
+              "name":"cat"
+          },{
+              "id":321,
+              "name":"dog"
+          }]
+    }
+}
+```
 
-|Alias|实际类型|
+#### 模型注入
+
+模型注入有两种方式，属性定义和__class字段
+
+1.属性定义
+
+```
+//在属性定义时，指定具体类型为Person
+@property (nonatomic, strong) Person *person;
+
+//配置文件无需做修改
+{
+    "data":{
+          "person":{
+              "name":"peter",
+              "age":15,
+              "money":10000000
+          },
+    }
+}
+```
+
+2.__class字段
+
+```
+{
+    "data":{
+          "person":{
+              "__class":"Person",
+              "name":"peter",
+              "age":15,
+              "money":10000000
+          },
+    }
+}
+```
+
+#### 模型数组注入
+
+模型数组，只需在每个对象中添加__class指定类型即可
+
+```
+{
+    "data":{
+      "persons":[{
+          "__class":"Person",
+          "name":"aaaa",
+          "age":15,
+          "money":10000000
+      },{
+          "__class":"Person",
+          "name":"bbbb",
+          "age":16,
+          "money":10000001
+      }]
+  }
+}
+```
+
+### 常量注入
+
+配置文件data属性下的任何一个属性值中配置了常量表达式，在运行时都会动态进行解析并替换为实际数值。
+
+**表达式必须已"$"开头。**
+
+如存在下面配置
+```
+{
+    "data": {
+        "screenWidth":"$SCREEN_WIDTH",
+        "screenScale":"$SCREEN_WIDTH/$SCREEN_HEIGHT"
+    }
+}
+```
+
+JCS_Injection在注入之前会将上面配置根据实际屏幕尺寸进行替换为下面内容后再进行注入
+
+```
+{
+    "data": {
+        "screenWidth":"375",
+        "screenScale":"375/667"
+    }
+}
+```
+
+已支持常量
+
+|常量表达式|说明|
 |---|---|
-|string|NSString|
-|int|NSInteger|
-|long|NSInteger|
-|float|CGFloat|
-|double|double|
-|bool|BOOL|
-|list|NSMutableArray|
-|mlist|NSMutableArray|
-|dict|NSMutableDictionary|
-|mdict|NSMutableDictionary|
+|SCREEN_WIDTH|屏幕宽度|
+|SCREEN_HEIGHT|屏幕高度|
+|SCREEN_SCALE|2倍、3倍|
+|STATUS_BAR_HEIGHT|状态栏高度iPhoneX系=44,其他20|
+|NAVIGATION_BAR_HEIGHT|导航栏高度iPhoneX系=88,其他64|
+|TAB_BAR_HEIGHT|Tab高度iPhoneX系=(49+34),其他49|
+|NAVIGATION_BAR_WITHOUTSTATUS_HEIGHT|导航栏不带statusbar,44|
+|HOME_INDICATOR_HEIGHT|Home指示剂iPhonex=34,其他=0|
+|iOS_VERSION|系统版本，如"11.4.1"|
+|APP_NAME|App名称，CFBundleDisplayName|
+|APP_VERSION|App版本，CFBundleShortVersionString|
+|BUILD_VERSION|AppBuild号，CFBundleVersion|
+|BUNDLE_ID|BundleId，CFBundleIdentifier|
+|DEVICE_TYPE|设备类型，[[UIDevice currentDevice] model]|
+|DEVICE_NAME|设备名称，如"JackCat's iPhone"|
 
-### 枚举类型
+### 完整示例
 
-```
-message Person {
-    ...
-    optional Sex sex = male; //性别
-    ...
-}
-```
-
-若配置信息中包换枚举配置，则上面Sex将被解析为JCUserSex类型，默认值为JCSUserSexMale。若未包含枚举配置，则将被视为异常类型，均以指针形式处理，处理结果" Sex * "
-
-### 内部Model
-
-当前配置信息中包含如下配置
-```
-message AddressInfo {
-    .....
-}
-```
-
-Person中有属性定义为
-```
-optional AddressInfo address = nil; //地址信息
-```
-
-则最终会被解析为
-
-```
-/** 地址信息 */
-@property (nonatomic, strong) JCUserAddressInfo *address;
-```
-
-### 外部Model
-
-JCS_Tool支持外部Model引用。如项目中存在定义 XXXAddress, 参照上文import方式进行引入。并配置为
-
-```
-optional XXXAddress address = nil; //地址信息
-```
-
-将被解析为
-
-```
-/** 地址信息 */
-@property (nonatomic, strong) XXXAddress *address;
-```
-
-引用外部Model，将不会自动添加前缀，类型部分需配置完整类名。反之将被作为指针类型原样输出。
-
-### 其他
-
-若配置了JCS_Tool无法解析的类型，则将被作为指针原样输出。
-
-如存在如下配置
-```
-optional UnKnowType address = nil;
-```
-
-将被解析为
-
-```
-@property (nonatomic, strong) UnKnowType *address;
-```
-
-**外部Model实际就是该原理进行实现**
-
-## 模型继承
-
-JCS_Tool支持模型继承，配置方式为
-
-```
-message Person {
-}
-message Student extends Person {
-}
-```
-解析结果为
-```
-@interface HKUserPerson : NSObject
-@end
-
-@interface HKUserStudent : HKUserPerson
-@end
-```
-
-**父类同时支持内部Model和外部Model**
-
-## 接口方法
-
-JCS_Tool生成的接口方法，需要依赖JCS_Reqeust类，JCS_Request源码在项目根目录下。
-
-### 响应内容解析
-
-JCS_Tool需要一个辅助Model来解析服务器响应内容。
-
-若服务端响应内容格式是这样的
 ```
 {
-    code:1000,
-    msg:"成功",
-    success:true,
-    data:....
+  "data":{
+      
+      "count":50,
+      "name":"属性注入",
+      
+      "data":{
+          "__class":"Person",
+          "name":"张三",
+          "age":18
+      },
+      
+      "items":[{
+          "id":123,
+          "name":"cat"
+      },{
+          "id":321,
+          "name":"dog"
+      }],
+      
+      "person1":{
+          "name":"aaaa",
+          "age":15,
+          "money":10000000,
+          "__width":10,
+          "likes":["唱歌","跳舞"],
+          "son":{
+              "name":"jack",
+              "age":5
+          }
+      },
+      
+      "person2":{
+          "__class":"Person",
+          "name":"aaaa",
+          "age":15,
+          "money":10000000,
+          "__width":10,
+          "likes":["唱歌","跳舞"],
+          "son":{
+              "name":"jack",
+              "age":5
+          }
+      },
+      
+      "persons":[{
+          "__class":"Person",
+          "name":"aaaa",
+          "age":15,
+          "money":10000000,
+          "likes":["唱歌","跳舞"],
+          "employees":[{
+              "__class":"Person",
+              "name":"张",
+              "likes":["唱歌","跳舞"],
+          },{
+              "__class":"Person",
+              "name":"李"
+          },{
+              "__class":"Person",
+              "name":"王"
+          }]
+      },{
+          "__class":"Person",
+          "name":"bbbb",
+          "age":16,
+          "money":10000001
+      },{
+          "__class":"Person",
+          "name":"cccc",
+          "age":17,
+          "money":10000002
+      }]
+  }
 }
 ```
 
-那么需要定一个的解析Model，名称可以自己指定
+## JCS_Router
+
+路由可降低不同组件之间的解耦，但不影响组件之间的通讯。
+
+如存在路由
 
 ```
-@interface CommonResponse : NSObject
+@interface TestRouter : NSObject
+@end
 
-@property (nonatomic, assign) BOOL success;
-@property (nonatomic, copy) NSString *code;
-@property (nonatomic, copy) NSString *msg;
+@implementation TestRouter
+- (void)hello:(NSDictionary*)params {
+    NSLog(@"路由方法被调用， 参数 = %@",params);
+}
+@end
+```
+
+调用上面的路由
+
+```
+//路由地址
+[JCS_RouterCenter router2Url:@"jcs://TestRouter/hello:" args:@{@"name":@"张三"} completion:nil];
+//代码调动
+[JCS_RouterCenter router2ClassName:@"TestRouter" selName:@"hello:" args:@{@"name":@"张三"} completion:nil];
+```
+
+### 调用规则
+
+JCS_Router内部是通过TargetAction方式进行方法调用，调用时需要提供方法执行对象Target和方法名Action。
+
+路由地址字符串必须以协议"jcs://"开头(**下文的特殊路由除外**)，例如
+
+```
+jcs://TestRouter/hello:?params1=1&params2=2...
+```
+
+上面路由地址将被解析为调用```[TestRouter hello:]```方法，参数是```{@"params1":@"1",@"params2":@"2"}```
+
+### 类方法 vs 示例方法
+
+对于类方法调用还是实例方法调用，JCS_Router都是一样的调用方法。方法查找规则如下
+
+* 查找实例方法，找到则执行，反之
+* 查找类方法，找到则执行，反之
+* 报错
+
+例如，存在下面的路由，
+
+```
+@implementation TestRouter
+- (void)sayHello:(NSDictionary*)params {
+    NSLog(@"实例方法 sayHello");
+}
++ (void)sayHello:(NSDictionary*)params {
+    NSLog(@"类方法 sayHello");
+}
+@end
+```
+
+调用方法
+
+```
+[JCS_RouterCenter router2ClassName:@"TestRouter" selName:@"sayHello:" args:@{@"name":@"张三"} completion:nil];
+```
+
+因为存在实例方法``` sayHello: ```,所以会打印出``` 实例方法 sayHello ```。
+若将实例方法注释掉，则会打印出``` 类方法 sayHello ```。
+
+### 缺省方法
+
+调用路由时若为给出Selector,则默认会执行@selector(setJcs_params:)方法。在他方法需要获取参数直接调用self.jcs_params即可。
+
+### 完成回调
+
+调用路由时提供了一个completion参数，类型为Block，可选。
+
+```
+void(^)(NSError *error, id response)
+```
+
+若传递了该参数，在路由方法中通过下面方法获取该block对象
+```
+void(^completion)(NSError*error,NSDictionary*response) = [params valueForKey:JCS_ROUTER_COMPLETION];
+```
+
+执行完成回调时，调用方的completion将收到回调
+
+```
+if(completion){
+    completion(nil,@{@"success":@YES})
+}
+```
+
+### 返回值
+
+JCS_Router支持同步返回
+
+```
+@implementation TestRouter
+- (NSString*)getMessage{
+    return @"你好 Message";
+}
+@end
+```
+
+调用方法
+
+```
+NSString *message = [JCS_RouterCenter router2ClassName:@"TestRouter" selName:@"getMessage" args:nil completion:nil];
+```
+
+### 跳转UIViewController
+
+方法一
+
+```
+//定义
+@implementation TestRouter
+- (void)showOrderListVC:(NSDictionary*)params {
+    OrderListVC *vc = [[OrderListVC alloc] init];
+    vc.jcs_params = params;
+    [self.jcs_currentVC jcs_pushVC:vc animated:YES];
+}
+@end
+
+//调用
+[JCS_RouterCenter router2ClassName:@"TestRouter" selName:@"showOrderListVC:" args:@{@"status":@1} completion:nil];
+```
+
+方法二
+
+```
+//该方法无需定义路由，直接传入ViewController名称即可。
+[JCS_RouterCenter router2Url:@"jcs://OrderListVC" args:@{@"status":@1} completion:nil];
+
+在ViewController中的jcs_params:方法中获取传入参数。
+也可以在setJcs_params:方法中自行接收参数
+```
+
+**重写setJcs_params:方法时，必须调用[super setJcs_params:]方法，否则将无法通过self.jcs_params属性获取数据**
+
+### 特殊路由
+
+JCS_Router内部已经实现了几个特殊路由，无需再为其定义路由即可使用。
+
+|路由|说明|
+|---|---|
+|sms://10086&&body=123|进行系统短信发送页面|
+|telprompt://4008887381|拨打电话4008887381|
+
+## JCS_EventBus
+
+JCS_EventBus为跨多层对象之间通讯而生。开发中有时会遇到下面的场景。
+
+* 一个UITableView，每一个Cell中都有个按钮，按钮点击事件需要统一管理。
+* 一个ViewController中的两个不相关的View和Button，两者跨层级较大，此时需要点击按钮时View的显示做出响应。
+
+通常我们解决这些文件可能最便捷的方法就是Notification了。
+
+JCS_EventBus为此提供了另一种方案。在ViewController中创建一个JCS_EventBus,每个子视图弱引用这个eventBus对象即可。
+
+### 示例
+
+#### 示例
+
+```
+//事件ID
+#define EVENT_ID @"EVENT_ID"
+
+@interface EventBus_ExampleVC ()
+@property (nonatomic, strong) JCS_EventBus *eventBus;
+@end
+
+@implementation EventBus_ExampleVC
+
+- (void)jcs_setup {
+    //事件注册
+    [self.eventBus registerAction:EVENT_ID executeBlock:^(id params){
+        NSLog(@"post 1 params = %@",params);
+    }];
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    //事件触发
+    [self.eventBus postEvent:EVENT_ID params:@{
+        @"goodsId":@"1o1o12i1i2"
+    }];
+}
+
+JCS_LAZY(JCS_EventBus, eventBus)
 
 @end
 ```
 
-将CommonResponse配置在Config对象中
+### 事件响应注册
+
+JCS_EventBus提供Block和Action两种注册方式。
 
 ```
-Config{
-    ......
-    "responseModel":"CommonResponse",
-    ......
+//Block形式
+[self.eventBus registerAction:EVENT_ID executeBlock:^(id params){
+    NSLog(@"post 1 params = %@",params);
+}];
+
+//Action
+[self.eventBus registerAction:EVENT_ID target:self selector:@selector(eventHandler:)];
+
+//Action响应
+- (void)eventHandler:(id)params {
+    NSLog(@"post 3 params = %@",params);
 }
 ```
 
+**若同一个EventId被注册多次，则所有注册的地方都将收到回调。**
 
-### JCS_Request
-
-JCS_Tool需要依赖一个JCS_Request的网络请求对象，名称目前不可自行指定。JCS_Request相关源码在项目根目录中。
-
-JCS_Request需要实现方法说明
+### 事件触发
 
 ```
-
-@interface JCS_Request : AFHTTPSessionManager
-
-/// 获取BaseUrl
-+ (NSString*)getBaseUrl;
-
-/// 对参数进行预处理，如加密、添加公共参数等。无特殊操作则直接 return params;
-+ (NSDictionary*)preprocessParams:(NSDictionary*)params;
-
-/// 返回响应中的data属性
-/// 例如服务端响应内容如下
-/// {
-///     code:10000,
-///     msg:"成功",
-///     success:true,
-///     data:{}
-/// }
-/// 则在该方法中 return [requestParams valueForKey:@"data"];
-+ (id)dataInResponse:(NSDictionary*)response url:(NSString*)url requestParams:(NSDictionary*)requestParams;
-
-/// 请求错误时，该方法会被调用，自行处理错误逻辑
-+ (void)errorRequest:(NSError*)error url:(NSString*)url requestParams:(NSDictionary*)requestParams;
-
-
-/// 菊花显示与隐藏
-+ (void)showQueryHub;
-+ (void)showRequestErrorHub:(NSError*)error;
-+ (void)hideRequestHub;
-
-@end
-```
-
-### 配置语法
-```
-request ${请求Method} ${生成方法名} ${响应data类型} ${请求连接} {
-    desc ${生成方法备注}
-    optional 参数类型 参数名1; //参数备注1
-    optional 参数类型 参数名2; //参数备注2
-}
-```
-
-* 请求Method为两种POST、GET。
-* 生成方法名自行指定，符合命名规则即可。
-* 响应data类型，已支持下面几种类型
-    * nil -> nil将被解析为NSDictionary类型
-    * dict -> NSDictionary
-    * list -> NSArray
-    * list<内部Person> -> NSArray<前缀+Person>
-    * list<外部部Person> -> NSArray<原样Person>
-    * Person -> 内部Model(前缀+Person)
-    * Person -> 外部Model(原样替换)
-
-具体示例
-```
-//get方式请求用户信息，data类型为NSDictionary
-request get getUserInfo1 nil /getUserInfo.action {
-    desc 获取用户信息接
-    optional int userId; // 用户ID
-}
-
-//post方式请求用户信息，data类型为Person
-request get getUserInfo2 Person /getUserInfo.action { }
-
-// post方式获取用户列表，data类型为NSArray
-request post getUserList1 list /getUserList.action {}
-
-// post方式获取用户列表，data类型为NSArray<Person>
-request post getUserList2 list<Person> /getUserList.action {}
-```
-
-上面配置内容将生成下面的一系列方法(为了方便阅读，下面内容是删除了相关注释后的内容)
-
-```
-@interface HKUserRequest : NSObject
-
-#pragma mark - getUserInfo1
-
-+ (void)requestGetUserInfo1WithHub:(BOOL)hub params:(NSDictionary *)params success:(void(^)(CommonResponse *result,NSDictionary *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
-+ (void)requestGetUserInfo1WithHub:(BOOL)hub userId:(NSInteger)userId  success:(void(^)(CommonResponse *result,NSDictionary *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
-
-#pragma mark - getUserInfo2
-
-+ (void)requestGetUserInfo2WithHub:(BOOL)hub params:(NSDictionary *)params success:(void(^)(CommonResponse *result,HKUserPerson *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
-+ (void)requestGetUserInfo2WithHub:(BOOL)hub  success:(void(^)(CommonResponse *result,HKUserPerson *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
-
-#pragma mark - getUserList1
-
-+ (void)requestGetUserList1WithHub:(BOOL)hub params:(NSDictionary *)params success:(void(^)(CommonResponse *result,NSArray *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
-+ (void)requestGetUserList1WithHub:(BOOL)hub  success:(void(^)(CommonResponse *result,NSArray *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
-
-#pragma mark - getUserList2
-
-+ (void)requestGetUserList2WithHub:(BOOL)hub params:(NSDictionary *)params success:(void(^)(CommonResponse *result,NSArray<HKUserPerson *> *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
-+ (void)requestGetUserList2WithHub:(BOOL)hub  success:(void(^)(CommonResponse *result,NSArray<HKUserPerson *> *data,NSDictionary *originResponse))success failure:(void(^)(NSError*error))failure;
-
-@end
-```
-
-调用方式
-
-```
-//获取用户信息，传入NSDictionary,返回值NSDictionary
-[HKUserRequest requestGetUserInfo1WithHub:YES params:@{@"userId":@1} success:^(CommonResponse *result, NSDictionary *data, NSDictionary *originResponse) {
-    if(result.success){
-        //请求成功，使用data进行业务处理
-    } else {
-        //请求失败
-        NSString *msg = result.msg;
-    }
-} failure:^(NSError *error) {
-    //请求失败
-}];
-    
-//获取用户信息，直接传入userId,返回值NSDictionary
-[HKUserRequest requestGetUserInfo1WithHub:YES userId:1 success:^(CommonResponse *result, NSDictionary *data, NSDictionary *originResponse) {
-    
-} failure:^(NSError *error) {
-    
-}];
-    
-//获取用户信息，传入NSDictionary,返回值HKUserPerson
-[HKUserRequest requestGetUserInfo2WithHub:YES params:@{@"userId":@1} success:^(CommonResponse *result, HKUserPerson *data, NSDictionary *originResponse) {
-    
-} failure:^(NSError *error) {
-    
-}];
-    
-// 获取用户列表，参数NSDictionary, 返回NSDictionary
-[HKUserRequest requestGetUserList1WithHub:YES params:nil success:^(CommonResponse *result, NSArray *data, NSDictionary *originResponse) {
-    
-} failure:^(NSError *error) {
-    
-}];
-    
-// 获取用户列表，参数NSDictionary, 返回NSArray<HKUserPerson *>
-[HKUserRequest requestGetUserList2WithHub:YES params:nil success:^(CommonResponse *result, NSArray<HKUserPerson *> *data, NSDictionary *originResponse) {
-    
-} failure:^(NSError *error) {
-    
+[self.eventBus postEvent:EVENT_ID params:@{
+    @"goodsId":@"1o1o12i1i2"
 }];
 ```
 
-有时会需要多个接口全部响应完成后再做业务处理，JCS_Tool为这样的需求做了兼容，为每个接口都生成返回RACSignal的方法，**该功能需要ReactiveObjC支持**。需要在Config中添加如下配置
+### 路由表
+
+有些场景下点击会通过路由进行转发，会这样写
 
 ```
-Config{
-    ......
-    "signalRequest":true,
-    ......
-}
-```
-配置内容无需改动，生成的方法会多出下面的方法
+//跳转至登录界面
+[self.eventBus registerAction:@"showLoginVC" executeBlock:^(id params){
+    [JCS_RouterCenter router2Url:@"jcs://LoginVC" args:params completion:nil];
+}];
+
+//跳转至订单列表页
+[self.eventBus registerAction:@"showOrderListVC" executeBlock:^(id params){
+    [JCS_RouterCenter router2Url:@"jcs://OrderListVC" args:params completion:nil];
+}];
+
+......
 
 ```
-@interface HKUserRequest : NSObject
 
-#pragma mark - getUserInfo1
+这样会产生太多类似的转发代码。为了方便，JCS_EventBus提供了路由表来解决这问题。
 
-+ (RACSignal*)requestGetUserInfo1WithHub:(BOOL)hub params:(NSDictionary *)params;
-+ (RACSignal*)requestGetUserInfo1WithHub:(BOOL)hub userId:(NSInteger)userId ;
-
-#pragma mark - getUserInfo2
-
-+ (RACSignal*)requestGetUserInfo2WithHub:(BOOL)hub params:(NSDictionary *)params;
-+ (RACSignal*)requestGetUserInfo2WithHub:(BOOL)hub ;
-
-#pragma mark - getUserList1
-
-+ (RACSignal*)requestGetUserList1WithHub:(BOOL)hub params:(NSDictionary *)params;
-+ (RACSignal*)requestGetUserList1WithHub:(BOOL)hub ;
-
-#pragma mark - getUserList2
-
-+ (RACSignal*)requestGetUserList2WithHub:(BOOL)hub params:(NSDictionary *)params;
-+ (RACSignal*)requestGetUserList2WithHub:(BOOL)hub ;
-
-@end
 ```
-
-调用方法，下面要求用户数据和用户列表数据全部处理完成后在进行业务处理为例
-```
-@weakify(self)
-[[RACSignal combineLatest:@[
-    [HKUserRequest requestGetUserInfo2WithHub:NO], //获取用户信息
-    [HKUserRequest requestGetUserList2WithHub:NO] //获取用户列表
-    
-] reduce:^id(NSDictionary *userInfo,NSDictionary *userlist){
-    
-    /**
-     若返回正常，则userInfo格式为
-     @{
-        @"result":result, //响应解析类型对象
-        @"data":data,  //data属性
-        @"originResponse":originResponse //响应原始数据
-     }
-     
-     若响应失败，则userInfo是一个NSError对象
-     */
-    
-    NSMutableDictionary *data = [NSMutableDictionary dictionary];
-    
-    //用户信息
-    if([userInfo isKindOfClass:NSDictionary.class]){
-        data[@"userInfo"] = [userInfo valueForKey:@"data"];
-    }
-    
-    //用户列表
-    if([userlist isKindOfClass:NSDictionary.class]){
-        data[@"userlist"] = [userlist valueForKey:@"data"];
-    }
-    
-    return data;
-    
-}] subscribeNext:^(NSDictionary *data) {
-    @strongify(self)
-    
-    HKUserPerson *userInfo = [data valueForKey:@"userInfo"];
-    NSArray<HKUserPerson*> *userlist = [data valueForKey:@"userlist"];
-    
-    //TODO: 这里拿到接口请求的数据进行业务处理
+[self.eventBus addEventRouterMapFromDictionary:@{
+    @"showLoginVC":@"jcs://LoginVC", //登录路由
+    @"showOrderListVC":@"jcs://OrderListVC" //跳转订单列表
 }];
 ```
+
+只需addEventRouterMapFromDictionary即可省去上面一堆的转发代码。
+
+**若同一个EventId在路由表中已存在，则该EventId其他注册的地方将不再收到触发回调**
+
+## JCS_Create
+
+### UITableView(代码创建)
+[JCS_TableView(代码创建)](https://github.com/jcsteam/JCS_Kit/blob/master/doc/uitableview-code.md)
+### UICollectionView(代码创建)
+[UICollectionView(代码创建)](https://github.com/jcsteam/JCS_Kit/blob/master/doc/uicollectionview-code.md)
+### UITableView(配置文件)
+[UITableView(配置文件)](https://github.com/jcsteam/JCS_Kit/blob/master/doc/uitableview-config-file.md)
+### UICollectionView(配置文件)
+[UICollectionView(配置文件)](https://github.com/jcsteam/JCS_Kit/blob/master/doc/uicollectionview-config-file.md)
+
+## 示例
+## 示例
 
 # Author
 
